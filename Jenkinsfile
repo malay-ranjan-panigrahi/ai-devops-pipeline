@@ -18,7 +18,6 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 sh "echo \$DOCKERHUB_CREDS_PSW | docker login -u \$DOCKERHUB_CREDS_USR --password-stdin"
-                // We only build and push 'latest' to keep it simple
                 sh "docker build -t ${IMAGE_NAME}:latest -f docker/Dockerfile ."
                 sh "docker push ${IMAGE_NAME}:latest"
                 echo "✅ New image pushed to Docker Hub."
@@ -27,10 +26,7 @@ pipeline {
 
         stage('Deploy to KIND Cluster') {
             steps {
-                // No more sed! Just apply the manifest.
                 sh "kubectl apply -f k8s/deployment.yaml"
-                
-                // We 'rollout restart' to force Kubernetes to pull the new 'latest' image
                 sh "kubectl rollout restart deployment/web-app-deployment -n agentic-devops"
                 echo "✅ Deployment updated in KIND cluster."
             }
@@ -41,20 +37,17 @@ pipeline {
         failure {
             echo "❌ Pipeline failed! Waking up the AI DevOps Agent..."
             script {
-                // 1. Grab the logs and save to a file
+                // 1. Grab logs
                 def logContent = currentBuild.rawBuild.getLog(50).join('\n')
                 writeFile file: 'error_log.txt', text: logContent
 
-                // 2. Run the entire AI Logic in ONE shell execution
+                // 2. Run AI Logic
                 sh """
                 #!/bin/bash
-                # Define the prompt using the file we just wrote
                 PROMPT="Act as a Senior DevOps Engineer. The Jenkins pipeline just failed. Analyze these logs, identify the root cause, and give a 3-step fix. Logs: \$(cat error_log.txt)"
                 
-                # Create the JSON (Shell variable, no Groovy interference)
                 PAYLOAD=\$(jq -n --arg text "\$PROMPT" '{contents: [{parts: [{"text": \$text}]}]}')
                 
-                # Call the API
                 RESPONSE=\$(curl -s -X POST "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
                     -H 'Content-Type: application/json' \
                     -d "\$PAYLOAD")
@@ -65,3 +58,8 @@ pipeline {
                 """
             }
         }
+        success {
+            echo "🎉 Pipeline completed successfully! The AI Agent is resting."
+        }
+    }
+}
