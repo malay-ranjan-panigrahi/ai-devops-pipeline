@@ -48,9 +48,9 @@ pipeline {
                 
                 PAYLOAD=\$(jq -n --arg text "\$PROMPT" '{contents: [{parts: [{"text": \$text}]}]}')
                 
-                RESPONSE=\$(curl -s -X POST "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
-                    -H 'Content-Type: application/json' \
-                    -d "\$PAYLOAD")
+                RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}" \
+    -H 'Content-Type: application/json' \
+    -d "$PAYLOAD")
                 
                 echo -e "\\n================ AI DIAGNOSIS & REMEDIATION ================\\n"
                 echo "\$RESPONSE" | jq -r '.candidates[0].content.parts[0].text'
