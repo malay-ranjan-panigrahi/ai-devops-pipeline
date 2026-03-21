@@ -39,15 +39,19 @@ pipeline {
 
         stage('Deploy to KIND Cluster') {
             steps {
-                // Dynamically update the deployment.yaml with the exact new image tag
-                sh "sed -i 's|ai-devops-app:latest|${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deployment.yaml"
+                script {
+                    // This is a safer way to replace the image string 
+                    // It looks for any image ending in 'ai-devops-app:ANYTHING' and replaces it
+                    sh "sed -i 's|image: .*ai-devops-app:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deployment.yaml"
+                }
                 
-                // Apply the updated manifest to the agentic-devops namespace
+                // Let's print the file to the console so we can see what the AI sees if it fails again
+                sh "cat k8s/deployment.yaml"
+                
                 sh "kubectl apply -f k8s/deployment.yaml"
                 echo "✅ Deployment triggered on local KIND cluster."
             }
         }
-    }
 
     // ==========================================
     // THE AGENTIC AI INTEGRATION
