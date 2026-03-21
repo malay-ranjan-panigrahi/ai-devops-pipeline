@@ -21,15 +21,16 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
+                // Log in FIRST to avoid rate limits or auth errors on public images
+                sh "echo \$DOCKERHUB_CREDS_PSW | docker login -u \$DOCKERHUB_CREDS_USR --password-stdin"
+                
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest -f docker/Dockerfile ."
                 echo "✅ Docker image built."
             }
         }
-
+        
         stage('Push to Docker Hub') {
             steps {
-                // Log in securely and push both the versioned tag and the 'latest' tag
-                sh "echo \$DOCKERHUB_CREDS_PSW | docker login -u \$DOCKERHUB_CREDS_USR --password-stdin"
                 sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh "docker push ${IMAGE_NAME}:latest"
                 echo "✅ Image pushed to Docker Hub."
