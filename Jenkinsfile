@@ -44,7 +44,7 @@ pipeline {
                 // 2. The AI Logic - Using Shell for API interaction
                 sh """
                 #!/bin/bash
-                # Clean logs: remove double quotes and backslashes so JSON stays valid
+                # Clean logs: remove double quotes and backslashes
                 CLEAN_LOGS=\$(cat error_log.txt | tr -d '"' | tr -d '\\\\')
 
                 # Create the JSON payload file
@@ -62,20 +62,20 @@ pipeline {
 }
 EOF
 
-                # 3. Call the API using the exact model from your list (Gemini 3.1)
+                # 3. Call the Gemini 3.1 API
                 RESPONSE=\$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}" \\
                     -H 'Content-Type: application/json' \\
                     -d @payload.json)
 
                 echo -e "\\n================ AI DIAGNOSIS & REMEDIATION ================\\n"
 
-                # Check if the response contains an error
+                # Check for errors and clean up control characters before parsing with jq
                 if echo "\$RESPONSE" | jq -e '.error' > /dev/null; then
                     echo "AI Agent Error Details:"
                     echo "\$RESPONSE" | jq .
                 else
-                    # Successfully extract the text
-                    echo "\$RESPONSE" | jq -r '.candidates[0].content.parts[0].text'
+                    # Clean the response string of invalid control characters so jq doesn't crash
+                    echo "\$RESPONSE" | sed 's/[[:cntrl:]]//g' | jq -r '.candidates[0].content.parts[0].text'
                 fi
 
                 echo -e "\\n============================================================\\n"
